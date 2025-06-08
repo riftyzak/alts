@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Alt Generator - Local</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    @font-face {
+  font-family: 'Helvetica';
+  src: url('fonts/Helvetica.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+    * {
+        font-family: 'Helvetica', Arial, sans-serif;
+    }
+    body {
+      padding: 20px;
+      background: #111;
+      color: #eee;
+    }
+    button {
+      margin: 4px;
+      padding: 6px 12px;
+      background: #333;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #555;
+    }
+    .alt-box {
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 12px;
+      margin: 12px 0;
+      background: #1a1a1a;
+    }
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+  overflow: hidden;
+  flex-wrap: nowrap;
+}
+
+.label {
+  flex-shrink: 0;
+  color: #aaa;
+  min-width: 80px;
+}
+
+.value {
+  flex-shrink: 1;
+  flex-grow: 0; /* ← prevent stretching */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%; /* ensures it won't overflow container */
+  color: #fff;
+}
+    
+    .header-container {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* space between icon and text */
+  margin-bottom: 12px; /* optional, space below header */
+    }
+
+    .header-icon {
+  width: 48px;  /* adjust size */
+  height: 48px;
+  object-fit: contain;
+    }
+
+    /* Toast notification - top center with slide down + fade */
+    #toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: #222;
+      color: #fff;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 1em;
+      opacity: 0;
+      pointer-events: none;
+      box-shadow: 0 0 12px rgba(0,0,0,0.6);
+      z-index: 9999;
+      animation-fill-mode: forwards;
+    }
+
+    @keyframes slideFadeInOut {
+      0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+      }
+      10% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+      90% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+      }
+    }
+   
+
+#confirm-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  
+  /* Initially hidden but takes space for animation */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#confirm-modal.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+
+.modal-content {
+  background: #1a1a1a;
+  padding: 20px 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.8);
+  color: #eee;
+  text-align: center;
+  min-width: 280px;
+  font-size: 1.1em;
+}
+
+.modal-buttons {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.modal-buttons button {
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background 0.2s;
+}
+
+.modal-buttons button:hover {
+  background: #555;
+}
+
+.copy-btn {
+  flex-shrink: 0;
+  background: #444;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+.copy-btn {
+  flex-shrink: 0;
+  background: transparent;
+  padding: 6px 12px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-icon {
+  color: #ddd;
+  transform-origin: center;
+}
+
+.copy-icon.copied {
+  color: #2ecc71; /* green */
+  
+}
+  </style>
+</head>
+<body>
+
+  <div class="header-container">
+  <img src="assets/opicka.webp" alt="opicka" class="header-icon" />
+  <h1>NENI STRE$S</h1>
+</div>
+  <button onclick="generateAlt()">Generate Alt</button>
+  <button onclick="clearAlts()">Clear All</button>
+
+  <div id="container"></div>
+  <div id="toast"></div>
+
+  <div id="confirm-modal">
+  <div class="modal-content">
+    <p>Clear all saved accounts?</p>
+    <div class="modal-buttons">
+      <button id="confirm-yes">Yes</button>
+      <button id="confirm-no">No</button>
+    </div>
+  </div>
+</div>
+
+  <script>
+    const domain = "riftyzak.ru";
+    const charsetUser = "abcdefghijklmnopqrstuvwxyz0123456789";
+    const charsetPass = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+
+    function getRandom(length, chars) {
+      let result = "";
+      for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    }
+
+    function generateAlt() {
+        const userLength = Math.floor(Math.random() * (20 - 10 + 1)) + 10; // random int between 10 and 20
+        const user = getRandom(userLength, charsetUser);
+        const pass = getRandom(12, charsetPass);
+        const email = `${user}@${domain}`;
+
+      const alt = { user, email, pass };
+      saveAlt(alt);
+      displayAlt(alt, true);
+    }
+
+function displayAlt(alt, insertTop = false) {
+  const html = `
+    <div class="alt-box">
+      <div class="field">
+        <span class="label">Username:</span>
+        <span class="value">${alt.user}</span>
+        <button class="copy-btn" onclick="copyText(this, '${alt.user}', 'Username')" aria-label="Copy Username">
+          <i class="fa-solid fa-clone copy-icon"></i>
+        </button>
+      </div>
+      <div class="field">
+        <span class="label">Email:</span>
+        <span class="value">${alt.email}</span>
+        <button class="copy-btn" onclick="copyText(this, '${alt.email}', 'Email')" aria-label="Copy Email">
+          <i class="fa-solid fa-clone copy-icon"></i>
+        </button>
+      </div>
+      <div class="field">
+        <span class="label">Password:</span>
+        <span class="value">${alt.pass}</span>
+        <button class="copy-btn" onclick="copyText(this, '${alt.pass}', 'Password')" aria-label="Copy Password">
+          <i class="fa-solid fa-clone copy-icon"></i>
+        </button>
+      </div>
+    </div>
+  `;
+  const container = document.getElementById("container");
+  if (insertTop) {
+    container.insertAdjacentHTML("afterbegin", html);
+  } else {
+    container.insertAdjacentHTML("beforeend", html);
+  }
+}
+
+
+
+
+function copyText(button, text, label = "Text") {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast(`${label} copied`);
+
+    const icon = button.querySelector('.copy-icon');
+    if (!icon) return;
+
+    icon.classList.add('copied');
+
+    setTimeout(() => {
+      icon.classList.remove('copied');
+    }, 500);
+  }).catch(() => {
+    showToast(`Failed to copy ${label}`);
+  });
+}
+
+
+
+
+    let toastTimeout;
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      toast.textContent = msg;
+
+      toast.style.animation = "none";
+      void toast.offsetWidth; // restart animation
+      toast.style.animation = "slideFadeInOut 2s ease forwards";
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+
+      toastTimeout = setTimeout(() => {
+        toast.textContent = "";
+        toast.style.pointerEvents = "none";
+      }, 2000);
+
+      toast.style.pointerEvents = "auto";
+    }
+
+    function saveAlt(alt) {
+      const existing = JSON.parse(localStorage.getItem("alts") || "[]");
+      existing.push(alt);
+      localStorage.setItem("alts", JSON.stringify(existing));
+    }
+
+    function loadSavedAlts() {
+      const saved = JSON.parse(localStorage.getItem("alts") || "[]");
+      saved.reverse().forEach(alt => displayAlt(alt));
+    }
+
+function clearAlts() {
+  const modal = document.getElementById('confirm-modal');
+  modal.classList.add('show');  // fade in
+
+  const yesBtn = document.getElementById('confirm-yes');
+  const noBtn = document.getElementById('confirm-no');
+
+  function cleanUp() {
+    modal.classList.remove('show'); // fade out
+    yesBtn.removeEventListener('click', onYes);
+    noBtn.removeEventListener('click', onNo);
+  }
+
+  function onYes() {
+    localStorage.removeItem("alts");
+    document.getElementById("container").innerHTML = "";
+    showToast("All accounts cleared");
+    cleanUp();
+  }
+
+  function onNo() {
+    cleanUp();
+  }
+
+  yesBtn.addEventListener('click', onYes);
+  noBtn.addEventListener('click', onNo);
+}
+
+
+    loadSavedAlts();
+  </script>
+</body>
+</html>
